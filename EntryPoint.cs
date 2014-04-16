@@ -1,4 +1,5 @@
-﻿using System.Data.Common;
+﻿using System;
+using System.Data.Common;
 
 namespace hmaker
 {
@@ -6,12 +7,15 @@ namespace hmaker
     {
         public static void Main()
         {
-            DbProviderFactory fact = DbProviderFactories.GetFactory("System.Data.SQLite");
-            using (DbConnection cnn = fact.CreateConnection())
+            DataSource source = new DataSource();
+            source.Connection("Data Source = tags.db3");
+            TagInfo[] tags = source.ReceiveTagsInfo();
+
+            foreach (TagInfo t in tags)
             {
-                cnn.ConnectionString = "Data Source=test.db3";
-                cnn.Open();
+                Console.WriteLine("{0} - {1}", t.Name, t.Description);
             }
+            Console.ReadKey();
         }
     }
 }

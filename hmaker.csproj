@@ -46,7 +46,9 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataSource.cs" />
     <Compile Include="EntryPoint.cs" />
+    <Compile Include="TagInfo.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
