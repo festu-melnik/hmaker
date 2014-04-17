@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace hmaker
+namespace HMaker
 {
-    class TagInfo
+    public class TagInfo
     {
         public string Name { get; private set; }
         public string Description { get; private set; }

@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 using System.Data.SQLite;
 using System.Data.Common;
 
-namespace hmaker
+namespace HMaker
 {
-    class DataSource
+    public class TagsSource
     {
         DbConnection connection = null;
 
-        public void Connection(string connectionString)
+        public void Connect(string connectionString)
         {
             if (connection != null)
             {
