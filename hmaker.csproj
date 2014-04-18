@@ -42,6 +42,7 @@
     <Reference Include="System.Data.SQLite">
       <HintPath>libsqlite\System.Data.SQLite.dll</HintPath>
     </Reference>
+<<<<<<< HEAD
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -53,6 +54,11 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+=======
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.XML" />
+    <Reference Include="System.Xml.Linq" />
+>>>>>>> d7a25658dcbb62f7f33a9c97ea4b5225855a307b
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
