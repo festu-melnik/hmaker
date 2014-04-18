@@ -24,16 +24,34 @@ namespace HMaker
             InitializeComponent();
         }
 
-        private void mainWindow_Initialized(object sender, EventArgs e)
+        private void mainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             TagsSource source = new TagsSource();
             source.Connect("Data Source = tags.db3");
             TagInfo[] tags = source.ReceiveTagsInfo();
+            Button[] buttons = new Button[tags.Length];
 
-            foreach (TagInfo t in tags)
+            for (int i = 0; i < buttons.Length; i++)
             {
-                MessageBox.Show(String.Format("{0} - {1}", t.Name, t.Description));
+                buttons[i] = new Button();
+                buttons[i].Content = tags[i].Name;
+                buttons[i].Tag = tags[i].Description;
+                buttons[i].Width = 50;
+                buttons[i].Height = 50;
+                buttons[i].Click += (object s, RoutedEventArgs args) =>
+                    {
+                        MessageBox.Show(String.Format("Выбран тег {0}", ((Button)s).Content));
+                    };
+                tagsPanel.Children.Add(buttons[i]);
             }
+
+            //Button new_tag = new Button();
+            //new_tag.Content = "+";
+            //new_tag.Width = 45;
+            //new_tag.Height = 30;
+            //tagsPanel.Children.Add(new_tag);
+
+            
         }
     }
 }
