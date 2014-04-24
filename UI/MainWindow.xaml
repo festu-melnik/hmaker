@@ -5,22 +5,22 @@
     <Grid>
         <Button x:Name="btNew" Content="" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="50" Height="50" Cursor="Hand">
             <Button.Background>
-                <ImageBrush ImageSource="Resources/new_file.png"/>
+                <ImageBrush ImageSource="../Resources/new_file.png"/>
             </Button.Background>
         </Button>
         <Button x:Name="btOpen" Content="" HorizontalAlignment="Left" Margin="65,10,0,0" VerticalAlignment="Top" Width="50" Height="50" Cursor="Hand">
             <Button.Background>
-                <ImageBrush ImageSource="Resources/open_file.png"/>
+                <ImageBrush ImageSource="../Resources/open_file.png"/>
             </Button.Background>
         </Button>
         <Button x:Name="btSave" Content="" HorizontalAlignment="Left" Margin="120,10,0,0" VerticalAlignment="Top" Width="50" Height="50" Cursor="Hand">
             <Button.Background>
-                <ImageBrush ImageSource="Resources/save_file.png"/>
+                <ImageBrush ImageSource="../Resources/save_file.png"/>
             </Button.Background>
         </Button>
         <Button x:Name="btRenew" Content="" HorizontalAlignment="Left" Margin="175,10,0,0" VerticalAlignment="Top" Width="50" Height="50" Cursor="Hand">
             <Button.Background>
-                <ImageBrush ImageSource="Resources/renew.png"/>
+                <ImageBrush ImageSource="../Resources/renew.png"/>
             </Button.Background>
         </Button>
         <StackPanel x:Name="tagsPanel" Height="50" Margin="250,10,10,0" VerticalAlignment="Top" Orientation="Horizontal" ScrollViewer.HorizontalScrollBarVisibility="Auto" CanHorizontallyScroll="True" CanVerticallyScroll="True" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
