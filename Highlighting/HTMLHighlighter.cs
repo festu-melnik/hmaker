@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HTMLCreator.Config;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Text.RegularExpressions;
@@ -8,91 +9,112 @@ namespace HTMLCreator.Highlighting
 {
     public class HTMLHighlighter : IHighlighter
     {
+        private ColorTheme colors;
+
         private HighlightRule tagsRule;
         private HighlightRule commentsRule;
         private HighlightRule numbersRule;
         private HighlightRule stringsRule;
         private HighlightRule tokensRule;
 
-        public List<string> TagNames { get; set; }
+        private string buffer;
 
-        public HTMLHighlighter()
+        private string[] tagNames;
+
+        public HTMLHighlighter(string[] tagNames)
         {
-            tagsRule = new HighlightRule(new Regex("[a-zA-Z0-9_-]+"), "#3399FF");
-            commentsRule = new HighlightRule(new Regex("<!--.*-->", RegexOptions.Singleline), "#339900");
-            numbersRule = new HighlightRule(new Regex("\\b[0-9]+\\b"), "#FF4040");
-            stringsRule = new HighlightRule(new Regex("\".*\""), "#FF4040");
-            tokensRule = new HighlightRule(new Regex("<|>|</"), "#4C59D8");
+            colors = ConfigurationManager.CurrentConfig.Colors;
 
-            TagNames = new List<string>(0);
+            tokensRule = new HighlightRule(new Regex("<|>|</"), colors.Token);
+            tagsRule = new HighlightRule(new Regex("[a-zA-Z0-9_-]+"), colors.Tag);
+            
+            numbersRule = new HighlightRule(new Regex("\\b[0-9]+\\b"), colors.Number);
+            stringsRule = new HighlightRule(new Regex("\".*\""), colors.String);
+
+            commentsRule = new HighlightRule(new Regex("<!--.*?-->", RegexOptions.Singleline), colors.Comment);
+
+            buffer = "";
+
+            this.tagNames = tagNames;
         }
 
-        public void Highlight(RichTextBox text)
+        public void Highlight(RichTextBox textBox)
         {
-            int originalIndex = text.SelectionStart;
-            int originalLength = text.SelectionLength;
+            int originalIndex; 
+            int originalLength;
+
+            string text = textBox.Text.Trim();
+
+            if (buffer == text)
+                return;
+
+            buffer = text;
+ 
+            originalIndex = textBox.SelectionStart;
+            originalLength= textBox.SelectionLength;
 
             // Сброс подсветки
-            text.SelectAll();
-            text.SelectionColor = Color.Black;
+            textBox.BackColor = ColorTranslator.FromHtml(colors.Background);
+            textBox.SelectAll();
+            textBox.SelectionColor = ColorTranslator.FromHtml(colors.Foreground);
 
 			// Теги.
-			foreach (Match m in tagsRule.Expression.Matches(text.Text)) 
+			foreach (Match m in tagsRule.Expression.Matches(textBox.Text)) 
             {
-                if (TagNames.Count > 0)
+                if (tagNames.Length > 0)
                 {
-                    foreach (string word in TagNames)
+                    foreach (string word in tagNames)
                     {
                         if (m.Value.Equals(word, StringComparison.InvariantCultureIgnoreCase))
                         {
-                            text.SelectionStart = m.Index;
-                            text.SelectionLength = m.Length;
-                            text.SelectionColor = tagsRule.TextColor;
+                            textBox.SelectionStart = m.Index;
+                            textBox.SelectionLength = m.Length;
+                            textBox.SelectionColor = tagsRule.TextColor;
                         }
                     }
                 }
                 else
                 {
-                    text.SelectionStart = m.Index;
-                    text.SelectionLength = m.Length;
-                    text.SelectionColor = tagsRule.TextColor;
+                    textBox.SelectionStart = m.Index;
+                    textBox.SelectionLength = m.Length;
+                    textBox.SelectionColor = tagsRule.TextColor;
                 }
 			}
 
 			// Числа.
-            foreach (Match m in numbersRule.Expression.Matches(text.Text)) 
+            foreach (Match m in numbersRule.Expression.Matches(textBox.Text)) 
             {
-                text.SelectionStart = m.Index;
-                text.SelectionLength = m.Length;
-                text.SelectionColor = numbersRule.TextColor;
+                textBox.SelectionStart = m.Index;
+                textBox.SelectionLength = m.Length;
+                textBox.SelectionColor = numbersRule.TextColor;
 			}
 
             // Строки.
-            foreach (Match m in stringsRule.Expression.Matches(text.Text))
+            foreach (Match m in stringsRule.Expression.Matches(textBox.Text))
             {
-                text.SelectionStart = m.Index;
-                text.SelectionLength = m.Length;
-                text.SelectionColor = numbersRule.TextColor;
+                textBox.SelectionStart = m.Index;
+                textBox.SelectionLength = m.Length;
+                textBox.SelectionColor = numbersRule.TextColor;
             }
 
             // Знаки < и >.
-            foreach (Match m in tokensRule.Expression.Matches(text.Text)) 
+            foreach (Match m in tokensRule.Expression.Matches(textBox.Text)) 
             {
-                text.SelectionStart = m.Index;
-                text.SelectionLength = m.Length;
-                text.SelectionColor = tokensRule.TextColor;
+                textBox.SelectionStart = m.Index;
+                textBox.SelectionLength = m.Length;
+                textBox.SelectionColor = tokensRule.TextColor;
 			}
 
 			// Комментарии.
-            foreach (Match m in commentsRule.Expression.Matches(text.Text)) 
+            foreach (Match m in commentsRule.Expression.Matches(textBox.Text)) 
             {
-                text.SelectionStart = m.Index;
-                text.SelectionLength = m.Length;
-                text.SelectionColor = commentsRule.TextColor;
+                textBox.SelectionStart = m.Index;
+                textBox.SelectionLength = m.Length;
+                textBox.SelectionColor = commentsRule.TextColor;
 			}
 
-            text.SelectionStart = originalIndex;
-            text.SelectionLength = originalLength;
+            textBox.SelectionStart = originalIndex;
+            textBox.SelectionLength = originalLength;
         }
     }
 }

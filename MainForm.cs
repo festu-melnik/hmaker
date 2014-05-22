@@ -1,4 +1,8 @@
-﻿using HTMLCreator.Highlighting;
+﻿using HTMLCreator.Config;
+using HTMLCreator.DocumentHandling;
+using HTMLCreator.Highlighting;
+using HTMLCreator.Parsing;
+using HTMLCreator.Tags;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,86 +17,43 @@ namespace HTMLCreator
 {
     public partial class MainForm : Form
     {
-        HTMLHighlighter hgl = new HTMLHighlighter();
-        bool unsaved = false;
+        List<string> tagNames;
+        int newFilesTotal;
+        const int maxTabName = 10;
 
         public MainForm()
         {
             InitializeComponent();
 
-            hgl.TagNames = new List<string>(new string[5] { "div", "a", "form", "h1", "h2" });
-            hgl.TagNames.Add("html");
-            hgl.TagNames.Add("head");
-            hgl.TagNames.Add("body");
-            hgl.TagNames.Add("title");
-            hgl.TagNames.Add("meta");
+            newFilesTotal = 0;
 
+            tabs.TabPages.RemoveAt(0);
+
+            TagsProvider prov = new TagsProvider();
+
+            tagNames = prov.ReceiveTagNames();
+            tagNames.Add("html");
+            tagNames.Add("head");
+            tagNames.Add("body");
+            tagNames.Add("title");
+            tagNames.Add("meta");
+
+            ConfigurationManager.LoadConfig();
+
+            NewDocument();
             AddSkeleton();
+            UpdateOpenDocument();
+            Highlight();
+
+            UpdateVisual();
+            
+
+            hglUpdateTimer.Start();
         }
 
         private void redactor_TextChanged(object sender, EventArgs e)
         {
-            hgl.Highlight((RichTextBox)sender);
-            unsaved = true;
-        }
-
-        private void newBtn_Click(object sender, EventArgs e)
-        {
-            if (unsaved)
-            {
-                SaveFile(true);
-            }
-
-            redactor.Clear();
-
-            AddSkeleton();
-        }
-
-        private void editBtn_Click(object sender, EventArgs e)
-        {
-            if (openFileDialog.ShowDialog() == DialogResult.OK)
-            {
-                SaveFile(true);
-                redactor.Text = File.ReadAllText(saveFileDialog.FileName);
-            }
-        }
-
-        private void saveBtn_Click(object sender, EventArgs e)
-        {
-            SaveFile(false);
-            unsaved = false;
-        }
-
-        private void refreshBtn_Click(object sender, EventArgs e)
-        {
-            ParseHTML(redactor.Text);
-        }
-
-        private void ParseHTML(string text)
-        {
-            // Парсинг кода и отображение.
-        }
-
-        private void SaveFile(bool ask)
-        {
-            if (ask)
-            {
-                const string message = "Сохранить измененный файл?";
-                const string caption = "Сохранение";
-                var result = MessageBox.Show(message, caption,
-                                             MessageBoxButtons.YesNo,
-                                             MessageBoxIcon.Question);
-
-                if (result == DialogResult.No)
-                {
-                    return;
-                }
-            }
-
-            if (saveFileDialog.ShowDialog() == DialogResult.OK)
-            {
-                File.WriteAllText(saveFileDialog.FileName, redactor.Text);
-            }
+            UpdateOpenDocument();
         }
 
         private void AddSkeleton()
@@ -107,10 +68,260 @@ namespace HTMLCreator
                 "  <body>\n" +
                 "  </body>\n" +
                 "</html>";
-
-            unsaved = true;
-
-            hgl.Highlight(redactor);
         }
+
+        #region docs
+
+        private void UpdateOpenDocument()
+        {
+            int idx = tabs.SelectedIndex;
+            // сохранение текста в документ
+            if (DocumentHandler.OpenDocuments[idx].Text != redactor.Text)
+                DocumentHandler.OpenDocuments[idx].Text = redactor.Text;
+        }
+
+        private void SaveDocument()
+        {
+            Document openDoc = DocumentHandler.OpenDocuments[tabs.SelectedIndex];
+            string path = openDoc.PathToFile;
+
+            if (String.IsNullOrEmpty(path))
+            {
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                    path = saveFileDialog.FileName;
+                else
+                    return;
+            }
+
+            openDoc.Save(path);
+
+            tabs.SelectedTab.Text = CropName(openDoc.Name);
+        }
+
+        private void NewDocument()
+        {
+            Document doc = new Document("new_" + ++newFilesTotal);
+            if(DocumentHandler.DocumentsTotal > 0)
+                UpdateOpenDocument();
+            AddDocument(doc);
+        }
+
+        private void AddDocument(Document doc)
+        {
+            // добавление нового документа
+            DocumentHandler.OpenDocuments.Add(doc);
+
+            // если есть открытые вкладки, очистка контролов
+            if (tabs.TabCount > 0)
+            {
+                // очистка выбранной вкладки
+                tabs.SelectedTab.Controls.Clear();
+                // очистка редактора
+                redactor.Clear();
+            }
+
+            // добавление вкладки
+            tabs.TabPages.Add(CropName(doc.Name));
+            // выбор добавленной вкладки
+            tabs.SelectedIndex = tabs.TabCount - 1;
+            tabs.SelectedTab.Controls.Add(container);
+            redactor.Text = doc.Text;
+        }
+
+        private void OpenDocument()
+        {
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+                OpenDocument(openFileDialog.FileName);
+        }
+
+        private void OpenDocument(string path)
+        {
+            Document doc = new Document("");
+            doc.Load(path);
+            
+            if(DocumentHandler.Exsists(doc))
+                return;
+
+            UpdateOpenDocument();
+
+            AddDocument(doc);
+        }
+
+        private void CloseDocument(int index)
+        {
+            int idx;
+
+            UpdateOpenDocument();
+
+            if (!DocumentHandler.OpenDocuments[index].Saved)
+            {
+                const string message = "Сохранить измененный файл?";
+                const string caption = "Сохранение";
+                var result = MessageBox.Show(message, caption,
+                                                MessageBoxButtons.YesNo,
+                                                MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                    SaveDocument();
+            }
+
+            // удаление вкладки
+            tabs.TabPages.RemoveAt(index);
+
+            if (tabs.TabPages.Count == 0)
+                return;
+
+            idx = tabs.SelectedIndex;
+
+            // удаление документа
+            DocumentHandler.DeleteDocument(index);
+            // добавление контролов на вкладку
+            tabs.SelectedTab.Controls.Add(container);
+            // загрузка текста из документа
+            redactor.Text = DocumentHandler.OpenDocuments[idx].Text;
+        }
+
+        private void CloseAllDocuments()
+        {
+            while (tabs.TabPages.Count > 0)
+            {
+                CloseDocument(tabs.SelectedIndex);
+            }
+        }
+
+        private void SelectDocument(int index)
+        {
+            UpdateOpenDocument();
+
+            // очистка выбранной вкладки
+            tabs.SelectedTab.Controls.Clear();
+            // очистка редактора
+            redactor.Clear();
+
+            // выбор указанной вкладки
+            tabs.SelectedIndex = index;
+
+            // добавление контролов на вкладку
+            tabs.SelectedTab.Controls.Add(container);
+            // загрузка текста из документа
+            redactor.Text = DocumentHandler.OpenDocuments[index].Text;
+        }
+
+        #endregion
+
+        private void DrawComponents(GraphComponent root, Image image)
+        {
+
+        }
+
+        private void UpdateVisual()
+        {
+            redactor.Font = new Font("Consolas", ConfigurationManager.CurrentConfig.FontSize);
+            Highlight();
+        }
+
+        private void Highlight()
+        {
+            HTMLHighlighter highlighter = new HTMLHighlighter(tagNames.ToArray());
+
+            view.Focus();
+            highlighter.Highlight(redactor);
+            redactor.Focus();
+        }
+
+        private string CropName(string name)
+        {
+            string newName = name;
+            if (newName.Length > maxTabName)
+                newName = newName.Substring(0, maxTabName - 3) + "...";
+            return newName;
+        }
+
+        #region handlers
+
+        private void hglUpdateTimer_Tick(object sender, EventArgs e)
+        {
+            if (redactor.Focused)
+                Highlight();
+        }
+
+        private void newToolBtn_Click(object sender, EventArgs e)
+        {
+            NewDocument();
+            AddSkeleton();
+            UpdateOpenDocument();
+            Highlight();
+        }
+
+        private void openToolBtn_Click(object sender, EventArgs e)
+        {
+            OpenDocument();
+            Highlight();
+        }
+
+        private void saveToolBtn_Click(object sender, EventArgs e)
+        {
+            SaveDocument();
+            Highlight();
+        }
+
+        private void refreshToolBtn_Click(object sender, EventArgs e)
+        {
+            HTMLParser parser = new HTMLParser();
+            GraphComponent root = parser.Parse(redactor.Text);
+
+        }
+
+        private void settingsToolBtn_Click(object sender, EventArgs e)
+        {
+            using (ConfigForm confForm = new ConfigForm())
+            {
+                confForm.ShowDialog(this);
+            }
+            UpdateVisual();
+        }
+
+        private void tabs_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            e.Graphics.DrawString("x", e.Font, Brushes.Black, e.Bounds.Right - 15, e.Bounds.Top + 4);
+            e.Graphics.DrawString(this.tabs.TabPages[e.Index].Text, e.Font, Brushes.Black, e.Bounds.Left + 12, e.Bounds.Top + 4);
+            e.DrawFocusRectangle();
+        }
+
+        private void tabs_MouseDown(object sender, MouseEventArgs e)
+        {
+            for (int i = 0; i < this.tabs.TabPages.Count; i++)
+            {
+                Rectangle r = tabs.GetTabRect(i);
+                // получение расположения 'х'
+                Rectangle closeButton = new Rectangle(r.Right - 15, r.Top + 5, 15, 15);
+                if (r.Contains(e.Location))
+                {
+                    SelectDocument(i);
+                    Highlight();
+                }
+                if (closeButton.Contains(e.Location))
+                {
+                    const string message = "Закврыть вкладку?";
+                    const string caption = "Закрытие вкладки";
+                    var result = MessageBox.Show(message, caption,
+                                                    MessageBoxButtons.YesNo,
+                                                    MessageBoxIcon.Question);
+
+                    if (result == DialogResult.Yes)
+                    {
+                        CloseDocument(i);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            CloseAllDocuments();
+        } 
+
+        #endregion
     }
 }

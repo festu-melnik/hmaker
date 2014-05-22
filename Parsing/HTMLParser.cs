@@ -8,72 +8,108 @@ namespace HTMLCreator.Parsing
 {
     class HTMLParser : IParser
     {
-        private Tag[] knownTags;
-
         private string html;
         private int pos;
 
         private bool EOF { get { return pos >= html.Length; } }
 
-        public int ErrorPosition { get; private set; } // место, где произошла ошибка. -1, если ошибок нет.
-
-        public HTMLParser(Tag[] knownTags)
-        {
-            this.knownTags = knownTags;
-            this.ErrorPosition = 0;
-        }
-
         public GraphComponent Parse(string text)
         {
-            string tagName = "";
+            string tagName;
             GraphComponent current = null;
 
             // корневой тег
             GraphComponent root = null;
 
+            // преобразование входного текста в одну строку
             html = text.Trim();
             html = html.Replace("\r\n", " ");
             html = html.Replace('\n', ' ');
 
-            // поиск тега body
+            // курсор на первую позицию
             pos = 0;
 
+            // к следующему открывающему токену
             ToNextOpenToken();
+            Move();
 
-            while (!EOF)
+            // проверка наличия DOCTYPE
+            if(GetChar() == '!')
             {
-                // пропуск открывающего токена
                 Move();
-                // проверка имени
+
                 tagName = ParseTagName();
-                if (tagName == "body")
+
+                if(tagName == "DOCTYPE")
                 {
-                    root = new GraphComponent(null);
-                    root.Block = false;
-                    root.AutoGrow = true;
-                    root.Width = 100;
-                    root.Height = 100;
-                    root.TextWrap = false;
-                    root.OutFields = 0;
-                    root.InFields = 2;
-                    root.Image = null;
-
-                    // переход на закрывающий токен
-                    ToNextCloseToken();
-                    // пропуск закрывающего токена
-                    Move();
-
-                    break;
+                    // Разбор DOCTYPE.
                 }
+                else
+                {
+                    return null;
+                }
+
                 ToNextOpenToken();
             }
 
-            if (root == null)
-                return null;
+            while(!EOF)
+            {
+                SkipSpaces();
 
-            current = root;
+                if(GetChar() == '<')
+                {
+                    Move();
+                    if(GetChar(0) == '!' 
+                        && GetChar(1) == '-' && GetChar(2) == '-')
+                    {
+                        Move(3);
+                        ToCommentEnd();
+                    }
+                    else if(GetChar() == '/')
+                    {
+                        if(root == null)
+                            return null;
+                        if(current == root)
+                            return root;
 
-            // когда корневой элемент найден, можно искать остальные
+                        current = current.Parent;
+                    }
+                    else
+                    {
+                        tagName = ParseTagName();
+                        if(root == null)
+                        {
+                            root = new GraphComponent(tagName, true, null);
+                            current = root;
+                        }
+                        else
+                        {
+                            GraphComponent comp;
+
+                            if(html.IndexOf("</" + tagName, pos) < 0)
+                                comp = new GraphComponent(tagName, false, current);             
+                            else
+                                comp = new GraphComponent(tagName, true, current);
+
+                            current.Internals.Add(comp);
+                            
+                            if(comp.Twin)
+                                current = comp;
+                        }
+                    }
+                    ToNextCloseToken();
+                    Move();
+                }
+                else
+                {
+                    TextComponent comp;
+
+                    // добавление текста
+                    comp = new TextComponent(ParseRawText(), current);
+
+                    current.Internals.Add(comp);
+                }
+            }
 
             return root;
         }
@@ -90,11 +126,13 @@ namespace HTMLCreator.Parsing
 
         private string ParseTagName()
         {
-            int start = pos;
+            int start;
+            
+            start = pos;
 
             while (!EOF)
             {
-                if (SpaceNext() || GetChar(1) == '>')
+                if (SpaceHere() || GetChar() == '>')
                     break;
                 else
                     Move();
@@ -105,11 +143,13 @@ namespace HTMLCreator.Parsing
 
         private string ParseAttributeName()
         {
-            int start = pos;
+            int start;
+
+            start = pos;
 
             while (!EOF)
             {
-                if (SpaceNext() || GetChar(1) == '>' || GetChar(1) == '=')
+                if (SpaceHere() || GetChar() == '>' || GetChar() == '=')
                     break;
                 else
                     Move();
@@ -124,7 +164,7 @@ namespace HTMLCreator.Parsing
 
             if (QuoteHere())
             {
-                char q = GetChar();
+                char q = (char)GetChar();
                 // пропуск открывающей кавычки
                 Move();
                 // парсинг значения
@@ -141,9 +181,10 @@ namespace HTMLCreator.Parsing
                 start = pos;
                 while (!EOF)
                 {
-                    if (SpaceNext() || GetChar() == '>')
+                    if (SpaceHere() || GetChar() == '>')
                         Move();
                 }
+
                 end = pos;
             }
 
@@ -152,7 +193,9 @@ namespace HTMLCreator.Parsing
 
         private string ParseRawText()
         {
-            int start = pos;
+            int start, end;
+            
+            start = pos;
 
             while (!EOF)
             {
@@ -162,17 +205,44 @@ namespace HTMLCreator.Parsing
                     Move();
             }
 
+            end = pos;
+
+            Move();
+
             return html.Substring(start, pos - start);
         }
 
-        private char GetChar(int skip)
+        private int GetChar(int skip)
         {
-            return html[pos + skip];
+            int cpos = pos + skip;
+
+            if (cpos < html.Length)
+                return html[pos + skip];
+            else
+                return -1;
         }
 
-        private char GetChar()
+        private int GetChar()
         {
             return GetChar(0);
+        }
+
+        private string GetChars(int skip, int length)
+        {
+            int start = pos + skip;
+            int end = start + length;
+
+            if (start < html.Length)
+            {
+                if(end < html.Length)
+                    return html.Substring(start, length);
+                else
+                    return html.Substring(start, html.Length - start);
+            }
+            else
+            {
+                return "";
+            }
         }
 
         private void Move(int step)
@@ -187,8 +257,13 @@ namespace HTMLCreator.Parsing
 
         private void SkipSpaces()
         {
-            while (!EOF && Char.IsWhiteSpace(GetChar()))
+            while (!EOF && SpaceHere())
                 Move();
+        }
+
+        private void ToCommentEnd()
+        {
+            SetPosition(html.IndexOf("--", pos));
         }
 
         private void SetPosition(int p)
@@ -199,14 +274,16 @@ namespace HTMLCreator.Parsing
                 pos = p;
         }
 
-        private bool SpaceNext()
+        private bool SpaceHere()
         {
-            return Char.IsWhiteSpace(GetChar(1));
+            if (EOF)
+                return false;
+            return Char.IsWhiteSpace((char)GetChar());
         }
 
         private bool QuoteHere()
         {
-            return GetChar(1) == '"' || GetChar(1) == '\'';
+            return GetChar() == '"' || GetChar() == '\'';
         }
     }
 }
