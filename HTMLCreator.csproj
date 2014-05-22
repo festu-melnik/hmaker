@@ -63,6 +63,8 @@
     <Compile Include="Config\ConfigurationManager.cs" />
     <Compile Include="DocumentHandling\Document.cs" />
     <Compile Include="DocumentHandling\DocumentHandler.cs" />
+    <Compile Include="Drawing\IDrawer.cs" />
+    <Compile Include="Drawing\SimpleDrawer.cs" />
     <Compile Include="Parsing\GraphComponent.cs" />
     <Compile Include="Highlighting\HighlightRule.cs" />
     <Compile Include="Highlighting\HTMLHighlighter.cs" />
@@ -134,6 +136,7 @@
   <ItemGroup>
     <None Include="Resources\tag-add.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

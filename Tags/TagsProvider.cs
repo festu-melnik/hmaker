@@ -35,6 +35,18 @@ namespace HTMLCreator.Tags
             return result;
         }
 
+        public bool? IsTwin(string name)
+        {
+            bool twin;
+            SQLiteCommand command = connection.CreateCommand();
+            command.CommandText = "SELECT twin FROM tags WHERE name = @name";
+            command.Parameters.AddWithValue("@name", name);
+
+            twin = Convert.ToBoolean(command.ExecuteScalar());
+
+            return twin;
+        }
+
         public List<Tag> ReceiveTags()
         {
             List<Tag> result = new List<Tag>();

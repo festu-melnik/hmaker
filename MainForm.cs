@@ -32,6 +32,10 @@ namespace HTMLCreator
             TagsProvider prov = new TagsProvider();
 
             tagNames = prov.ReceiveTagNames();
+
+            foreach (string str in tagNames)
+                tagsToolBtn.DropDownItems.Add(str);
+
             tagNames.Add("html");
             tagNames.Add("head");
             tagNames.Add("body");
@@ -40,9 +44,30 @@ namespace HTMLCreator
 
             ConfigurationManager.LoadConfig();
 
-            NewDocument();
-            AddSkeleton();
-            UpdateOpenDocument();
+            DocumentHandler.Load();
+
+            if (DocumentHandler.DocumentsTotal > 0)
+            {
+                Document doc = new Document("");
+                for (int i = 0; i < DocumentHandler.DocumentsTotal; i++)
+                {
+                    doc = DocumentHandler.OpenDocuments[i];
+
+                    // добавление вкладки
+                    tabs.TabPages.Add(CropName(doc.Name));
+                }
+                // выбор добавленной вкладки
+                tabs.SelectedIndex = tabs.TabCount - 1;
+                tabs.SelectedTab.Controls.Add(container);
+                redactor.Text = doc.Text;
+            }
+            else
+            {
+                NewDocument();
+                AddSkeleton();
+                UpdateOpenDocument();
+            }
+            
             Highlight();
 
             UpdateVisual();
@@ -130,6 +155,7 @@ namespace HTMLCreator
 
         private void OpenDocument()
         {
+            
             if (openFileDialog.ShowDialog() == DialogResult.OK)
                 OpenDocument(openFileDialog.FileName);
         }
@@ -191,8 +217,6 @@ namespace HTMLCreator
 
         private void SelectDocument(int index)
         {
-            UpdateOpenDocument();
-
             // очистка выбранной вкладки
             tabs.SelectedTab.Controls.Clear();
             // очистка редактора
@@ -209,15 +233,17 @@ namespace HTMLCreator
 
         #endregion
 
-        private void DrawComponents(GraphComponent root, Image image)
-        {
-
-        }
+        
 
         private void UpdateVisual()
         {
             redactor.Font = new Font("Consolas", ConfigurationManager.CurrentConfig.FontSize);
             Highlight();
+
+            saveFileDialog.InitialDirectory = ConfigurationManager.CurrentConfig.FilesPath;
+            openFileDialog.InitialDirectory = ConfigurationManager.CurrentConfig.FilesPath;
+
+            grfUpdateTimer.Interval = ConfigurationManager.CurrentConfig.RefreshRate;
         }
 
         private void Highlight()
@@ -247,20 +273,35 @@ namespace HTMLCreator
 
         private void newToolBtn_Click(object sender, EventArgs e)
         {
-            NewDocument();
-            AddSkeleton();
-            UpdateOpenDocument();
-            Highlight();
+            if (ConfigurationManager.CurrentConfig.MaxTabs < tabs.TabCount)
+            {
+                NewDocument();
+                AddSkeleton();
+                UpdateOpenDocument();
+                Highlight();
+            }
+            else
+            {
+                MessageBox.Show("Слишком много вкладок. Закройте лишнее и попробуйте еще раз.");
+            }
         }
 
         private void openToolBtn_Click(object sender, EventArgs e)
         {
-            OpenDocument();
-            Highlight();
+            if (ConfigurationManager.CurrentConfig.MaxTabs < tabs.TabCount)
+            {
+                OpenDocument();
+                Highlight();
+            }
+            else
+            {
+                MessageBox.Show("Слишком много вкладок. Закройте лишнее и попробуйте еще раз.");
+            }
         }
 
         private void saveToolBtn_Click(object sender, EventArgs e)
         {
+            UpdateOpenDocument();
             SaveDocument();
             Highlight();
         }
@@ -319,9 +360,42 @@ namespace HTMLCreator
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (ConfigurationManager.CurrentConfig.SaveOpenedFiles)
+                DocumentHandler.Save();
             CloseAllDocuments();
         } 
 
         #endregion
+
+        private void tagsToolBtn_DropDownItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        {
+            TagsProvider tags = new TagsProvider();
+            string name = e.ClickedItem.Text;
+            bool twin = (bool)tags.IsTwin(name);
+
+            if (twin)
+                Clipboard.SetText(String.Format("<{0}></{0}>", name));
+            else
+                Clipboard.SetText(String.Format("<{0}>", name));
+
+            redactor.Paste();
+
+            if (twin)
+                redactor.SelectionStart = redactor.SelectionStart - name.Length - 3;
+
+            Highlight();
+        }
+
+        private void redactor_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (ConfigurationManager.CurrentConfig.ReplaceTabsBySpaces)
+            {
+                if (e.KeyChar == (char)Keys.Tab)
+                {
+                    e.Handled = true;
+                    redactor.SelectedText = new string(' ', ConfigurationManager.CurrentConfig.TabWidth);
+                }
+            }
+        }
     }
 }

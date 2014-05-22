@@ -39,10 +39,7 @@
             this.saveToolBtn = new System.Windows.Forms.ToolStripButton();
             this.refreshToolBtn = new System.Windows.Forms.ToolStripButton();
             this.separator = new System.Windows.Forms.ToolStripSeparator();
-            this.toolStripDropDownButton1 = new System.Windows.Forms.ToolStripDropDownButton();
-            this.testToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.testToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.testToolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
+            this.tagsToolBtn = new System.Windows.Forms.ToolStripDropDownButton();
             this.settingsToolBtn = new System.Windows.Forms.ToolStripButton();
             this.tabs = new System.Windows.Forms.TabControl();
             this.tab = new System.Windows.Forms.TabPage();
@@ -92,7 +89,7 @@
             this.saveToolBtn,
             this.refreshToolBtn,
             this.separator,
-            this.toolStripDropDownButton1,
+            this.tagsToolBtn,
             this.settingsToolBtn});
             this.tools.Location = new System.Drawing.Point(0, 0);
             this.tools.Name = "tools";
@@ -146,36 +143,15 @@
             this.separator.Name = "separator";
             this.separator.Size = new System.Drawing.Size(6, 55);
             // 
-            // toolStripDropDownButton1
+            // tagsToolBtn
             // 
-            this.toolStripDropDownButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.toolStripDropDownButton1.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.testToolStripMenuItem,
-            this.testToolStripMenuItem1,
-            this.testToolStripMenuItem2});
-            this.toolStripDropDownButton1.Image = global::HTMLCreator.Properties.Resources.tag_add;
-            this.toolStripDropDownButton1.ImageTransparentColor = System.Drawing.Color.Transparent;
-            this.toolStripDropDownButton1.Name = "toolStripDropDownButton1";
-            this.toolStripDropDownButton1.Size = new System.Drawing.Size(61, 52);
-            this.toolStripDropDownButton1.Text = "Добавить тег";
-            // 
-            // testToolStripMenuItem
-            // 
-            this.testToolStripMenuItem.Name = "testToolStripMenuItem";
-            this.testToolStripMenuItem.Size = new System.Drawing.Size(93, 22);
-            this.testToolStripMenuItem.Text = "test";
-            // 
-            // testToolStripMenuItem1
-            // 
-            this.testToolStripMenuItem1.Name = "testToolStripMenuItem1";
-            this.testToolStripMenuItem1.Size = new System.Drawing.Size(93, 22);
-            this.testToolStripMenuItem1.Text = "test";
-            // 
-            // testToolStripMenuItem2
-            // 
-            this.testToolStripMenuItem2.Name = "testToolStripMenuItem2";
-            this.testToolStripMenuItem2.Size = new System.Drawing.Size(93, 22);
-            this.testToolStripMenuItem2.Text = "test";
+            this.tagsToolBtn.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.tagsToolBtn.Image = global::HTMLCreator.Properties.Resources.tag_add;
+            this.tagsToolBtn.ImageTransparentColor = System.Drawing.Color.Transparent;
+            this.tagsToolBtn.Name = "tagsToolBtn";
+            this.tagsToolBtn.Size = new System.Drawing.Size(61, 52);
+            this.tagsToolBtn.Text = "Добавить тег";
+            this.tagsToolBtn.DropDownItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.tagsToolBtn_DropDownItemClicked);
             // 
             // settingsToolBtn
             // 
@@ -259,6 +235,7 @@
             this.redactor.Size = new System.Drawing.Size(1048, 141);
             this.redactor.TabIndex = 3;
             this.redactor.Text = "";
+            this.redactor.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.redactor_KeyPress);
             // 
             // MainForm
             // 
@@ -297,10 +274,7 @@
         private System.Windows.Forms.ToolStripButton saveToolBtn;
         private System.Windows.Forms.ToolStripButton refreshToolBtn;
         private System.Windows.Forms.ToolStripSeparator separator;
-        private System.Windows.Forms.ToolStripDropDownButton toolStripDropDownButton1;
-        private System.Windows.Forms.ToolStripMenuItem testToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem testToolStripMenuItem1;
-        private System.Windows.Forms.ToolStripMenuItem testToolStripMenuItem2;
+        private System.Windows.Forms.ToolStripDropDownButton tagsToolBtn;
         private System.Windows.Forms.ToolStripButton settingsToolBtn;
         private System.Windows.Forms.TabControl tabs;
         private System.Windows.Forms.TabPage tab;

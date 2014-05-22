@@ -45,6 +45,8 @@ namespace HTMLCreator
             saveOpenedFiles.Checked = newConfig.SaveOpenedFiles;
             replaceTabBySpaces.Checked = newConfig.ReplaceTabsBySpaces;
             tabWidth.Value = newConfig.TabWidth;
+            tabWidth.Visible = newConfig.ReplaceTabsBySpaces;
+            label4.Visible = newConfig.ReplaceTabsBySpaces;
             refreshRate.Value = newConfig.RefreshRate;
             maxTabs.Value = newConfig.MaxTabs;
             fontSize.Value = newConfig.FontSize;
