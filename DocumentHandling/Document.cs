@@ -12,29 +12,30 @@ namespace HTMLCreator.DocumentHandling
 
         public string Text { get { return text; } set { Saved = false; text = value; } }
 
-        public string PathToFile { get; private set; }
+        public string PathToFile { get; set; }
         public string Name { get; private set; }
         public bool Saved { get; private set; }
 
-        public Document(string name)
+        public Document()
         {
-            Name = name;
+            Name = "";
+            Text = "";
             Saved = true;
+            PathToFile = "";
         }
 
-        public void Save(string path)
+        public Document(string path)
         {
-            File.WriteAllText(path, text);
-            PathToFile = path;
             Name = Path.GetFileNameWithoutExtension(path);
+            Text = File.ReadAllText(path);
             Saved = true;
+            PathToFile = path;
         }
 
-        public void Load(string path)
+        public void Save()
         {
-            text = File.ReadAllText(path);
-            PathToFile = path;
-            Name = Path.GetFileNameWithoutExtension(path);
+            File.WriteAllText(PathToFile, Text);
+            Name = Path.GetFileNameWithoutExtension(PathToFile);
             Saved = true;
         }
     }

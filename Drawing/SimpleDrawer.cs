@@ -16,6 +16,7 @@ namespace HTMLCreator.Drawing
 
             // определение размеров изображения
 
+
             // отрисовка
             img = null;
 

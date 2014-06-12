@@ -18,16 +18,22 @@ namespace HTMLCreator
     public partial class MainForm : Form
     {
         List<string> tagNames;
-        int newFilesTotal;
+        int newFilesTotal = 0;
+
         const int maxTabName = 10;
+        const string skeleton = "<!DOCTYPE html>\n" +
+                                "<html>\n" +
+                                "  <head>\n" +
+                                "    <title>untitled</title>\n" +
+                                "    <meta charset=\"utf-8\">\n" +
+                                "  </head>\n" +
+                                "  <body>\n" +
+                                "  </body>\n" +
+                                "</html>";
 
         public MainForm()
         {
             InitializeComponent();
-
-            newFilesTotal = 0;
-
-            tabs.TabPages.RemoveAt(0);
 
             TagsProvider prov = new TagsProvider();
 
@@ -44,28 +50,29 @@ namespace HTMLCreator
 
             ConfigurationManager.LoadConfig();
 
+            tabs.TabPages.Clear();
+
             DocumentHandler.Load();
 
             if (DocumentHandler.DocumentsTotal > 0)
             {
-                Document doc = new Document("");
                 for (int i = 0; i < DocumentHandler.DocumentsTotal; i++)
                 {
-                    doc = DocumentHandler.OpenDocuments[i];
+                    string name = DocumentHandler.OpenDocuments[i].Name;
 
                     // добавление вкладки
-                    tabs.TabPages.Add(CropName(doc.Name));
+                    tabs.TabPages.Add(CropName(name));
                 }
                 // выбор добавленной вкладки
-                tabs.SelectedIndex = tabs.TabCount - 1;
-                tabs.SelectedTab.Controls.Add(container);
-                redactor.Text = doc.Text;
+                tabs.SelectedIndex = 0;
+                tabs.TabPages[0].Controls.Add(container);
+                // загрузка
+                redactor.Text = DocumentHandler.OpenDocuments[0].Text;
             }
             else
             {
                 NewDocument();
-                AddSkeleton();
-                UpdateOpenDocument();
+                UpdateOpenedDocument();
             }
             
             Highlight();
@@ -78,56 +85,64 @@ namespace HTMLCreator
 
         private void redactor_TextChanged(object sender, EventArgs e)
         {
-            UpdateOpenDocument();
-        }
-
-        private void AddSkeleton()
-        {
-            redactor.Text +=
-                "<!DOCTYPE html>\n" +
-                "<html>\n" +
-                "  <head>\n" +
-                "    <title>untitled</title>\n" +
-                "    <meta charset=\"utf-8\">\n" +
-                "  </head>\n" +
-                "  <body>\n" +
-                "  </body>\n" +
-                "</html>";
+            UpdateOpenedDocument();
         }
 
         #region docs
 
-        private void UpdateOpenDocument()
+        private void UpdateOpenedDocument()
         {
             int idx = tabs.SelectedIndex;
+
             // сохранение текста в документ
             if (DocumentHandler.OpenDocuments[idx].Text != redactor.Text)
                 DocumentHandler.OpenDocuments[idx].Text = redactor.Text;
         }
 
-        private void SaveDocument()
+        private void LoadText()
+        {
+            int idx = tabs.SelectedIndex;
+
+            // загрузка текста
+            if (redactor.Text != DocumentHandler.OpenDocuments[idx].Text)
+                redactor.Text = DocumentHandler.OpenDocuments[idx].Text;
+        }
+
+        private void SaveDocument(bool ask)
         {
             Document openDoc = DocumentHandler.OpenDocuments[tabs.SelectedIndex];
-            string path = openDoc.PathToFile;
 
-            if (String.IsNullOrEmpty(path))
+            if (ask)
+            {
+                const string message = "Сохранить изменения?";
+                const string caption = "Сохранение";
+                var result = MessageBox.Show(message, caption,
+                                                MessageBoxButtons.YesNo,
+                                                MessageBoxIcon.Question);
+
+                if (result != DialogResult.Yes)
+                    return;
+            }
+
+            if (String.IsNullOrEmpty(openDoc.PathToFile))
             {
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
-                    path = saveFileDialog.FileName;
+                    openDoc.PathToFile = saveFileDialog.FileName;
                 else
                     return;
             }
 
-            openDoc.Save(path);
+            openDoc.Save();
 
             tabs.SelectedTab.Text = CropName(openDoc.Name);
         }
 
         private void NewDocument()
         {
-            Document doc = new Document("new_" + ++newFilesTotal);
-            if(DocumentHandler.DocumentsTotal > 0)
-                UpdateOpenDocument();
+            Document doc = new Document();
+
+            doc.Text = skeleton;
+
             AddDocument(doc);
         }
 
@@ -139,14 +154,17 @@ namespace HTMLCreator
             // если есть открытые вкладки, очистка контролов
             if (tabs.TabCount > 0)
             {
+                // обновление открытого документа
+                UpdateOpenedDocument();
                 // очистка выбранной вкладки
                 tabs.SelectedTab.Controls.Clear();
-                // очистка редактора
-                redactor.Clear();
             }
 
             // добавление вкладки
-            tabs.TabPages.Add(CropName(doc.Name));
+            if (String.IsNullOrWhiteSpace(doc.Name))
+                tabs.TabPages.Add(CropName("new " + ++newFilesTotal));
+            else
+                tabs.TabPages.Add(CropName(doc.Name));
             // выбор добавленной вкладки
             tabs.SelectedIndex = tabs.TabCount - 1;
             tabs.SelectedTab.Controls.Add(container);
@@ -155,20 +173,16 @@ namespace HTMLCreator
 
         private void OpenDocument()
         {
-            
             if (openFileDialog.ShowDialog() == DialogResult.OK)
                 OpenDocument(openFileDialog.FileName);
         }
 
         private void OpenDocument(string path)
         {
-            Document doc = new Document("");
-            doc.Load(path);
+            Document doc = new Document(path);
             
             if(DocumentHandler.Exsists(doc))
                 return;
-
-            UpdateOpenDocument();
 
             AddDocument(doc);
         }
@@ -176,20 +190,6 @@ namespace HTMLCreator
         private void CloseDocument(int index)
         {
             int idx;
-
-            UpdateOpenDocument();
-
-            if (!DocumentHandler.OpenDocuments[index].Saved)
-            {
-                const string message = "Сохранить измененный файл?";
-                const string caption = "Сохранение";
-                var result = MessageBox.Show(message, caption,
-                                                MessageBoxButtons.YesNo,
-                                                MessageBoxIcon.Question);
-
-                if (result == DialogResult.Yes)
-                    SaveDocument();
-            }
 
             // удаление вкладки
             tabs.TabPages.RemoveAt(index);
@@ -203,15 +203,25 @@ namespace HTMLCreator
             DocumentHandler.DeleteDocument(index);
             // добавление контролов на вкладку
             tabs.SelectedTab.Controls.Add(container);
+            redactor.TextChanged += redactor_TextChanged;
             // загрузка текста из документа
-            redactor.Text = DocumentHandler.OpenDocuments[idx].Text;
+            LoadText();
         }
 
         private void CloseAllDocuments()
         {
-            while (tabs.TabPages.Count > 0)
+            for (int i = 0; i < tabs.TabPages.Count; i++)
             {
-                CloseDocument(tabs.SelectedIndex);
+                if (!DocumentHandler.OpenDocuments[i].Saved)
+                {
+                    SelectDocument(i);
+                    SaveDocument(true);
+                }
+            }
+
+            if (ConfigurationManager.CurrentConfig.SaveOpenedFiles)
+            {
+                DocumentHandler.Save();
             }
         }
 
@@ -219,21 +229,18 @@ namespace HTMLCreator
         {
             // очистка выбранной вкладки
             tabs.SelectedTab.Controls.Clear();
-            // очистка редактора
-            redactor.Clear();
 
             // выбор указанной вкладки
             tabs.SelectedIndex = index;
 
             // добавление контролов на вкладку
             tabs.SelectedTab.Controls.Add(container);
+            redactor.TextChanged += redactor_TextChanged;
             // загрузка текста из документа
-            redactor.Text = DocumentHandler.OpenDocuments[index].Text;
+            LoadText();
         }
 
-        #endregion
-
-        
+        #endregion        
 
         private void UpdateVisual()
         {
@@ -273,36 +280,34 @@ namespace HTMLCreator
 
         private void newToolBtn_Click(object sender, EventArgs e)
         {
-            if (ConfigurationManager.CurrentConfig.MaxTabs < tabs.TabCount)
+            if (tabs.TabCount < ConfigurationManager.CurrentConfig.MaxTabs)
             {
                 NewDocument();
-                AddSkeleton();
-                UpdateOpenDocument();
                 Highlight();
             }
             else
             {
-                MessageBox.Show("Слишком много вкладок. Закройте лишнее и попробуйте еще раз.");
+                MessageBox.Show("Слишком много вкладок. Закройте лишние и попробуйте еще раз.");
             }
         }
 
         private void openToolBtn_Click(object sender, EventArgs e)
         {
-            if (ConfigurationManager.CurrentConfig.MaxTabs < tabs.TabCount)
+            if (tabs.TabCount < ConfigurationManager.CurrentConfig.MaxTabs)
             {
                 OpenDocument();
                 Highlight();
             }
             else
             {
-                MessageBox.Show("Слишком много вкладок. Закройте лишнее и попробуйте еще раз.");
+                MessageBox.Show("Слишком много вкладок. Закройте лишние и попробуйте еще раз.");
             }
         }
 
         private void saveToolBtn_Click(object sender, EventArgs e)
         {
-            UpdateOpenDocument();
-            SaveDocument();
+            UpdateOpenedDocument();
+            SaveDocument(false);
             Highlight();
         }
 
@@ -351,6 +356,7 @@ namespace HTMLCreator
 
                     if (result == DialogResult.Yes)
                     {
+                        SaveDocument(true);
                         CloseDocument(i);
                         break;
                     }
@@ -396,6 +402,11 @@ namespace HTMLCreator
                     redactor.SelectedText = new string(' ', ConfigurationManager.CurrentConfig.TabWidth);
                 }
             }
+        }
+
+        private void tabs_Deselecting(object sender, TabControlCancelEventArgs e)
+        {
+            //UpdateOpenDocument();
         }
     }
 }

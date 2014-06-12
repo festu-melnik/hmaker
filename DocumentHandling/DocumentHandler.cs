@@ -29,14 +29,20 @@ namespace HTMLCreator.DocumentHandling
 
         public static void Save()
         {
-            string[] files = new string[OpenDocuments.Count];
+            string path;
 
-            for (int i = 0; i < files.Length; i++)
+            File.Create("file-history");
+
+            using (StreamWriter sw = new StreamWriter("file-history"))
             {
-                files[i] = OpenDocuments[i].PathToFile;
-            }
+                for (int i = 0; i < OpenDocuments.Count; i++)
+                {
+                    path = OpenDocuments[i].PathToFile;
 
-            File.WriteAllLines("file-history", files);
+                    if(!String.IsNullOrWhiteSpace(path))
+                        sw.WriteLine(path);
+                }
+            }
         }
 
         public static void Load()
@@ -50,9 +56,7 @@ namespace HTMLCreator.DocumentHandling
                 files = File.ReadAllLines("file-history");
                 for (int i = 0; i < files.Length; i++)
                 {
-                    Document doc = new Document("");
-                    doc.Load(files[i]);
-                    AddDocument(doc);
+                    AddDocument(new Document(files[i]));
                 }
             }
         }
